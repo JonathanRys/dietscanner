@@ -1,13 +1,16 @@
 import React, { Component } from "react";
 import { StyleSheet, Text, ScrollView, View } from "react-native";
-import { createIconSet } from "react-native-vector-icons";
 import * as Font from 'expo-font';
-
-// const glyphMap = { "icon-name": 1234, test: "∆" };
-// const Icon = createIconSet(glyphMap, "FranklinGothic-Heavy");
 
 class Item extends Component {
   render() {
+    if (!this.props.showEmpty &&
+         this.props.unit !== undefined ||
+         this.props.value !== undefined) {
+      // Don't display entries without data unless specified
+      return null;
+    }
+
     return (
       <View
         style={[{ marginLeft: this.props.subItem ? 20 : 0 }, styles.mainItem]}
@@ -73,7 +76,11 @@ export default class NutritionalInfo extends Component {
           <Text style={styles.smallBoldText}>% Daily Value*</Text>
         </View>
         <View style={styles.limitThese}>
-          <Item {...{ value: 12, unit: "g", percent: 18 }}>
+          <Item {...{ 
+            value: this.props.fat_value,
+            unit: this.props.fat_unit,
+            percent: 18 
+          }}>
             <Text style={styles.largeBoldText}>Total Fat</Text>
           </Item>
           <Item {...{ value: 10, unit: "g", percent: 15, subItem: true }}>
@@ -82,10 +89,10 @@ export default class NutritionalInfo extends Component {
           <Item {...{ value: 3, unit: "g", percent: null, subItem: true }}>
             Trans Fat
           </Item>
-          <Item {...{ value: 30, unit: "mg", percent: 10 }}>
+          <Item {...{ value: this.props.cholesterol_value, unit: this.props.cholesterol_unit, percent: 10 }}>
             <Text style={styles.largeBoldText}>Cholesterol</Text>
           </Item>
-          <Item {...{ value: 470, unit: "mg", percent: 20 }}>
+          <Item {...{ value: this.props.sodium_value, unit: this.props.sodium_unit, percent: 20 }}>
             <Text style={styles.largeBoldText}>Sodium</Text>
           </Item>
           <Item {...{ value: 31, unit: "g", percent: 10 }}>
@@ -103,10 +110,10 @@ export default class NutritionalInfo extends Component {
           </Item>
         </View>
         <View style={styles.vitamins}>
-          <Item {...{ value: "", unit: "", percent: 4 }}>Vitamin A</Item>
-          <Item {...{ value: "", unit: "", percent: 2 }}>Vitamin C</Item>
-          <Item {...{ value: "", unit: "", percent: 20 }}>Calcium</Item>
-          <Item {...{ value: "", unit: "", percent: 4 }}>Iron</Item>
+          <Item {...{ value: this.props["vitamin-a_value"], unit: this.props["vitamin-a_unit"], percent: 4 }}>Vitamin A</Item>
+          <Item {...{ value: this.props["vitamin-c_value"], unit: this.props["vitamin-c_unit"], percent: 2 }}>Vitamin C</Item>
+          <Item {...{ value: this.props.calcium_value, unit: this.props.calcium_unit, percent: 20 }}>Calcium</Item>
+          <Item {...{ value: this.props.iron_value, unit: this.props.iron_unit, percent: 4 }}>Iron</Item>
         </View>
         <View style={styles.footnote}>
           <Text>* </Text>
@@ -197,3 +204,13 @@ const styles = StyleSheet.create({
     marginLeft: 20
   }
 });
+
+
+// product.nutriments.
+      // fat, fat_unit, fat_value, fat_100g, fat_serving
+      // salt, salt_unit, salt_value, salt_100g, salt_serving
+      // sodium, sodium_unit, sodium_value, sodium_100g, sodium_serving
+      // energy, energy_unit, energy_value, energy_100g, energy_serving
+      // proteins, energy_unit, energy_value, energy_100g, energy_serving
+      // carbohydrates, carbohydrates_unit, carbohydrates_value, carbohydrates_100g, carbohydrates_serving
+

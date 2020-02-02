@@ -5,9 +5,10 @@
  */
 
 import React, { Component } from "react";
-import { Platform, StyleSheet, Text, Button, View } from "react-native";
+import { Platform, StyleSheet, Text, Button, View, ScrollView } from "react-native";
 // import { RNCamera } from "react-native-camera";
 import { Camera } from 'expo-camera';
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 import Settings from "./Settings/Settings.js";
 import ProductFinder from "./ProductFinder/ProductFinder.js";
@@ -28,14 +29,17 @@ export default class App extends Component {
     this.state = {
       message: instructions,
       lastScan: null,
-      productInfo: null
+      productInfo: null,
+      hasCameraPermission: false
     };
   }
 
-  componentDidMount(nextProps) {
+  async componentDidMount(nextProps) {
+    const { status } = await Camera.requestPermissionsAsync();
+    
     this.setState({
-      message:
-        "Scan your first item\nHold the phone in the same direction as the barcode"
+      hasCameraPermission: status === 'granted',
+      message: "Scan your first item\nHold the phone in the same direction as the barcode"
     });
   }
 
@@ -43,75 +47,75 @@ export default class App extends Component {
     return (
       <View style={styles.container}>
         <View style={styles.cameraContainer}>
-        <NutritionalInfo />
-        {/*
-          <RNCamera
-            ref={ref => {
-              this.camera = ref;
+          <BarCodeScanner 
+            style={styles.preview}
+            barCodeScannerSettings={{
+              barCodeTypes: [
+                'ean13',
+                'ean8',
+                'upc_a',
+                'upc_e',
+                'upc_ean'
+              ]
             }}
-            style={styles.preview}
-            type={RNCamera.Constants.Type.back}
-            permissionDialogTitle={"Permission to use camera"}
-            permissionDialogMessage={
-              "We need your permission to use your camera phone"
-            }
-            onBarCodeRead={this.handleBarCode.bind(this)}
-          />
-        */}
-        {/*
-        
-          <Camera 
-            style={styles.preview}
-            type={Camera.Constants.Type.back}
             onBarCodeScanned={this.handleBarCode.bind(this)}
             />
-
-          <ScannerOverlay />
-        */}
+          <ScannerOverlay/>
         </View>
-        <View style={styles.tray}>
-          <Text style={styles.message}>{this.state.message}</Text>
+        <View>
+          <View style={styles.tray}>
+            <Text style={styles.message}>{this.state.message}</Text>
+            {this.state.productInfo ? (
+              <ScrollView>
+                <Text style={styles.message}>{this.state.message}</Text>
+                <Text>{JSON.stringify(this.state.productInfo.data.product.nutriments)}</Text>
+                <NutritionalInfo {...this.state.productInfo.data.product.nutriments}/>
+              </ScrollView>
+            ) : null}
+          </View>
+          {this.state.productInfo ? (
+            <Button
+              style={styles.resetButton}
+              title={"SCAN NEW ITEM"}
+              onPress={this.handleScanButton.bind(this)}
+            />
+          ) : (
+            <Button
+              style={styles.resetButton}
+              title={"ENTER PLU"}
+              onPress={this.handlePLUButton.bind(this)}
+            />
+          )}
         </View>
-        {this.state.productInfo ? (
-          <Button
-            style={styles.resetButton}
-            title={"SCAN NEW ITEM"}
-            onPress={this.handleScanButton.bind(this)}
-          />
-        ) : (
-          <Button
-            style={styles.resetButton}
-            title={"ENTER PLU"}
-            onPress={this.handlePLUButton.bind(this)}
-          />
-        )}
       </View>
     );
   }
 
   handleBarCode(scanResult) {
+    // Debounce @todo memoize
     if (this.state.lastScan === scanResult.data) return;
 
     console.log(
       `Code of type ${scanResult.type} read with a result of ${scanResult.data}`
     );
 
-    dataFetcher = data => {
+    const scannerCallback = response => {
       let msg;
 
-      console.log("DATA:", data);
+      console.log("DATA:", response);
 
-      if (!!data.data.status) {
-        msg = `Ingredients: ${data.data.product.ingredients_text}`;
-        this.setState({ productInfo: data });
-        console.log("Product found:", data.data.product.ingredients_text);
+      if (!!response.data.status) {
+        msg = `Ingredients: ${response.data.product.ingredients_text}`;
+        this.setState({ productInfo: response });
+        console.log("Product found:", response.data.product.ingredients_text);
+        console.log("Nutriments:", response.data.product.nutriments);
       } else {
-        if (!data.data.error) {
+        if (!response.data.error) {
           msg = "Product not found";
           console.log("Product not found");
           //setTimeout(resetScanner, 5000);
         } else {
-          msg = "data.data.error";
+          msg = "response.data.error";
         }
         this.setState({ productInfo: null });
       }
@@ -119,7 +123,7 @@ export default class App extends Component {
       this.setState({
         message: msg,
         lastScan: scanResult.data,
-        productInfo: data
+        productInfo: response
       });
       // product.brands
 
@@ -141,7 +145,7 @@ export default class App extends Component {
       // carbohydrates, carbohydrates_unit, carbohydrates_value, carbohydrates_100g, carbohydrates_serving
     };
 
-    ProductFinder(scanResult.data, dataFetcher);
+    ProductFinder(scanResult.data, scannerCallback);
   }
 
   handleScanButton(e) {
@@ -174,10 +178,8 @@ const styles = StyleSheet.create({
   },
   preview: {
     flex: 1,
-    justifyContent: "flex-end",
-    alignItems: "center",
-    backgroundColor: "red",
-    borderColor: "blue"
+
+    backgroundColor: "black"
   },
   message: {
     textAlign: "center",
@@ -185,23 +187,16 @@ const styles = StyleSheet.create({
     marginBottom: 5
   },
   cameraContainer: {
-    width: "100%",
+    backgroundColor: "black",
     flex: 1,
-    backgroundColor: "red"
+    flexDirection: "row",
+    height: "100%",
+    width: "100%"
   },
   resetButton: {
     bottom: 10
   },
   tray: {
     backgroundColor: "transparent"
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "black",
-    opacity: 0.8
   }
 });
